@@ -35,6 +35,7 @@ def cb_scale_slider(sender, app_data):
 class WadFile_IO:
     def __init__(self):
         self.wadfile = None
+        self.level = None
         #self.map_names = []
         #self.map_data = []
 
@@ -44,8 +45,12 @@ class WadFile_IO:
         #self.map_names = self.wadfile.maps.keys()
         #self.map_data = [self.wadfile.maps[map_name] for map_name in self.map_names]
 
-    def plot_map(self, sender, app_data):
+    def plot_map(self, sender, app_data, level):
         if self.wadfile:
+
+            if not self.level:
+                self.level = "MAP25"
+
             scales = 0
             total  = 0
             #alias = 3
@@ -66,7 +71,7 @@ class WadFile_IO:
             dmspawns = False
             ctfspawns = False
             
-            wad_level = omg.MapEditor(self.wadfile.maps["MAP01"])
+            wad_level = omg.MapEditor(self.wadfile.maps[self.level])
 
             # determine scale = map area unit / pixel
             xmin = min([v.x for v in wad_level.vertexes])
@@ -110,15 +115,17 @@ class WadFile_IO:
             wad_level.linedefs.sort(key=lambda a: not a.two_sided)
 
 
-            with dpg.drawlist(width=xsize, height=ysize, parent="map_viewer_id"):
+            with dpg.drawlist(width=xsize, height=ysize, label="drawlist", parent="map_viewer_id"):
+                    
+
                 # draw all lines from their vertexes
                 for line in wad_level.linedefs:
                     p1x = wad_level.vertexes[line.vx_a].x - xmin + border
                     p1y = wad_level.vertexes[line.vx_a].y - ymin + border
                     p2x = wad_level.vertexes[line.vx_b].x - xmin + border
                     p2y = wad_level.vertexes[line.vx_b].y - ymin + border
-                    color = (0, 0, 0)
-                    if line.two_sided:   color = (144, 144, 144)
+                    color = (175, 0, 0)
+                    if line.two_sided:   color = (100, 100, 150)
                     #if line.special:    color = (220, 130, 50)
                     #if line.id > defid: color = (200, 110, 30)
 
