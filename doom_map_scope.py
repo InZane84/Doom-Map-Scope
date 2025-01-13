@@ -16,7 +16,6 @@ LICENSE file in the root directory of this source tree.
 
 import dearpygui.dearpygui as dpg
 import omg
-from drawmaps import plotmap
 
 
 dpg.create_context()
@@ -108,19 +107,19 @@ class WadFile_IO:
                     t.x = int(t.x * ascale); t.y = int(t.y * -ascale)
 
             # draw 1s lines after 2s lines so 1s lines are never obscured
-            wad_level.linedefs.sort(key=lambda a: not a.twosided)
+            wad_level.linedefs.sort(key=lambda a: not a.two_sided)
 
 
-            with dpg.drawlist(width=xsize, height=ysize):
+            with dpg.drawlist(width=xsize, height=ysize, parent="map_viewer_id"):
                 # draw all lines from their vertexes
                 for line in wad_level.linedefs:
-                    p1x = wad_level.vertexes[line.v1].x - xmin + border
-                    p1y = wad_level.vertexes[line.v1].y - ymin + border
-                    p2x = wad_level.vertexes[line.v2].x - xmin + border
-                    p2y = wad_level.vertexes[line.v2].y - ymin + border
+                    p1x = wad_level.vertexes[line.vx_a].x - xmin + border
+                    p1y = wad_level.vertexes[line.vx_a].y - ymin + border
+                    p2x = wad_level.vertexes[line.vx_b].x - xmin + border
+                    p2y = wad_level.vertexes[line.vx_b].y - ymin + border
                     color = (0, 0, 0)
-                    if line.twosided:   color = (144, 144, 144)
-                    if line.special:    color = (220, 130, 50)
+                    if line.two_sided:   color = (144, 144, 144)
+                    #if line.special:    color = (220, 130, 50)
                     #if line.id > defid: color = (200, 110, 30)
 
                     # draw multiple lines to simulate thickness
@@ -183,7 +182,7 @@ with dpg.window(label="UI Scaling", width=200, height=100, id="scale_slider_wind
 with dpg.viewport_menu_bar():
     dpg.add_menu_item(label="UI Scaling...", callback= lambda: dpg.show_item("scale_slider_window"))
 
-with dpg.window(label="Map Viewer", width=1280, height=720, id= "map_viewer_id"):
+with dpg.window(label="Map Viewer", width=1280, height=720, id="map_viewer_id"):
     #dpg.show_documentation()
     dpg.add_button(label="Show MAP01", callback=wadfile.plot_map)
     with dpg.menu_bar():
@@ -193,10 +192,6 @@ with dpg.window(label="Map Viewer", width=1280, height=720, id= "map_viewer_id")
             #dpg.show_documentation()
             #dpg.add_menu_item(label="Save")
             #dpg.add_menu_item(label="Exit")
-
-    with dpg.drawlist(width=800, height=600):
-        dpg.draw_line((10, 10), (100, 100), color=(255, 0, 0, 255), thickness=1)
-
 
 dpg.setup_dearpygui()
 
