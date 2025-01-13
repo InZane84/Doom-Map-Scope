@@ -135,6 +135,9 @@ def drawmap(wad, name, filename, maxpixels, reqscale):
     del draw
     im.save(filename)
 
+def plotmap(wad, name, maxpixels, reqscale):
+    """ Draw a map to a DearPyGui window"""
+    pass
 
 def drawspawns(edit, draw, xmin, ymin, border, thtype, sptcol, flag):
 

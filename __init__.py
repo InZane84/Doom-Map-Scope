@@ -15,6 +15,7 @@ __author__ = "InZane84"
 # why can't I reference omg in doom_map_scope.py ?
 #import omg
 
+
 # Initialize package-level variables or configurations here
 # config = {
 #     "setting1": "value1",
