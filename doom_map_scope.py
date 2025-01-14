@@ -26,6 +26,9 @@ dpg.show_imgui_demo()
 def cb_scale_slider(sender, app_data):
     dpg.set_global_font_scale(app_data)
 
+def cb_remove_drawlist():
+    dpg.delete_item("drawlist")
+
 """def cb_open_wadfile(sender, app_data):
     
     print(f"Wadfile(s) selected: { app_data['file_path_name'] }")
@@ -115,7 +118,7 @@ class WadFile_IO:
             wad_level.linedefs.sort(key=lambda a: not a.two_sided)
 
 
-            with dpg.drawlist(width=xsize, height=ysize, label="drawlist", parent="map_viewer_id"):
+            with dpg.drawlist(width=xsize, height=ysize, id="drawlist", parent="map_viewer_id"):
                     
 
                 # draw all lines from their vertexes
@@ -192,6 +195,7 @@ with dpg.viewport_menu_bar():
 with dpg.window(label="Map Viewer", width=1280, height=720, id="map_viewer_id"):
     #dpg.show_documentation()
     dpg.add_button(label="Show MAP01", callback=wadfile.plot_map)
+    dpg.add_button(label="Clear...", callback= cb_remove_drawlist)
     with dpg.menu_bar():
         with dpg.menu(label="File"):
             dpg.add_menu_item(label="Open a WAD file...", callback= lambda: dpg.show_item("file_dialog_id"))
