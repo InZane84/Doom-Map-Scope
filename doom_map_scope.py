@@ -17,6 +17,7 @@ LICENSE file in the root directory of this source tree.
 import dearpygui.dearpygui as dpg
 import omg
 import time
+import re
 
 
 dpg.create_context()
@@ -67,27 +68,57 @@ def combo_callback(sender, app_data):
 """
 
 class WadFile_IO:
+    """Class for handling WAD file I/O operations."""
     def __init__(self):
+        
+        # set by open_wadfile
         self.wadfile = None
+
+        # set by plot_map
         self.level = None
         self.maxpixels = 1000
-        #self.map_names = []
-        #self.map_data = []
+
+        # populatated once open_wadfile is called
+        self.map_ids = None
+
+        # set by identify_game
+        self.game = None
+        
+        #self.map_data = None
 
     def open_wadfile(self, sender, app_data):
+        """Open a WAD file and load the map data."""
         self.wadfile = omg.WAD(app_data['file_path_name'])
+        
         dpg.set_item_label("map_viewer_id", f"Map Viewer - Wadfile: { app_data['file_path_name'] }")
         dpg.configure_item("show_map_btn", enabled=True)
-        #self.map_names = self.wadfile.maps.keys()
-        #self.map_data = [self.wadfile.maps[map_name] for map_name in self.map_names]
+        
+        # get the key from wadfile.maps to identify the game format
+        first_key = self.wadfile.maps.keys()[0]
+        game.identify_game(first_key)
+        # now set the regex pattern for the map IDs
+        if self.game == "DOOM":
+            mapID_format = r"E\d{1}M\d{1}"
+            print(f"Game format: {self.game}")
+        elif self.game == "DOOM2":
+            mapID_format = r"MAP\d{2}"
+            print(f"Game format: {self.game}")
+        else:
+            print("Unsupported game format!")
+            return
+        self.get_map_ids(self.wadfile.maps, mapID_format)
+        print(f"Map IDs: {self.map_ids}")
+
 
     def plot_map(self, sender, app_data, level):
+        """Plot the map data to the map viewer window."""
         if self.wadfile:
 
             dpg.delete_item("drawlist")
 
-            if not self.level:
+            """if not self.level:
                 self.level = "MAP25"
+            """
 
             scales = 0
             total  = 0
@@ -204,8 +235,13 @@ class WadFile_IO:
     def get_map(self, map_name):
         return self.wadfile.maps[map_name]
 
-    def get_map_names(self):
-        return self.map_names
+    def get_map_ids(self, map_dict, mapID_format):
+        """Get the map names from the WAD file."""
+        def find_maps(map_dict, mapID_format):
+            regex = re.compile(mapID_format)
+            matched_keys = [key for key in map_dict.keys() if regex.match(key)]
+            return matched_keys
+        self.map_ids = find_maps(map_dict, mapID_format)
 
     def get_map_data(self):
         return self.map_data
@@ -217,12 +253,41 @@ class WadFile_IO:
 
 wadfile = WadFile_IO()
 
+class GameIdentify:
+    """Class for identifying the game format of the WAD file."""
+    def __init__(self):
+        # set by identify_game
+        self.game = None
+    
+    def identify_game(self, map_name):
+        if "E" in map_name:
+            self.game = "DOOM"
+        elif "MAP" in map_name:
+            self.game = "DOOM2"
+        else:
+            self.game = "UNKNOWN/UNSUPPORTED"
+        
+        wadfile.game = self.game
+    
+    def switch_map(self, map_name):
+        map_format = self.identify_game(map_name)
+        
+        if map_format == "DOOM":
+            return omg.WAD(map_name)
+        elif map_format == "DOOM2":
+            return omg.WAD(map_name)
+        else:
+            print(f"Unsupported map format: {map_name}")
+
+game = GameIdentify()
 
 with dpg.file_dialog(directory_selector=False, show=False, callback=wadfile.open_wadfile, id="file_dialog_id", width=800, height=400):
+    # TODO: Fix this shit!
     dpg.add_file_extension(".wad", color=(255, 0, 0))
+    dpg.add_file_extension(".WAD", color=(0, 255, 0))
     dpg.add_file_extension(".iwad")
     dpg.add_file_extension(".pwad")
-    dpg.add_file_extension("*.*")
+    dpg.add_file_extension(".*")
     #dpg.add_file_extension(".pk3")
     #dpg.add_file_extension(".wad2")
     #dpg.add_file_extension(".wad3")
