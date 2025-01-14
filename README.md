@@ -1,2 +1,3 @@
 # Doom-Map-Scope
 A DooM wadfile map viewer
+Switch to the 'master' branch...
