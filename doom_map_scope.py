@@ -43,23 +43,34 @@ def cb_remove_drawlist():
         wadfile.plot_map(sender, snapped_value, level=None)"""
 
 def combo_callback(sender, app_data):
+    """Callback for the map scale combo box."""
+
+    # TODO: after switching maps the combo box is stuck on the last map!
+
     print(f"Selected Option: {app_data}")
     match app_data:
         case "100":
             wadfile.maxpixels = 2000
-            wadfile.plot_map(sender, app_data, level=None)
+            wadfile.plot_map(sender, app_data, level=wadfile.level)
         case "75":
             wadfile.maxpixels = 1500
-            wadfile.plot_map(sender, app_data, level=None)
+            wadfile.plot_map(sender, app_data, level=wadfile.level)
         case "50":
             wadfile.maxpixels = 1000
-            wadfile.plot_map(sender, app_data, level=None)
+            wadfile.plot_map(sender, app_data, level=wadfile.level)
         case "25":
             wadfile.maxpixels = 750
-            wadfile.plot_map(sender, app_data, level=None)
+            wadfile.plot_map(sender, app_data, level=wadfile.level)
         case "0":
             wadfile.maxpixels = 500
-            wadfile.plot_map(sender, app_data, level=None)
+            wadfile.plot_map(sender, app_data, level=wadfile.level)
+
+def map_selection_callback(sender, app_data):
+    """Callback for the map selection combo box."""
+    print(f"sender: {sender}")
+    print(f"app_data: {app_data}")
+    wadfile.level = app_data
+    wadfile.plot_map(sender, app_data, level=app_data)
 
 """def cb_open_wadfile(sender, app_data):
     
@@ -88,10 +99,14 @@ class WadFile_IO:
 
     def open_wadfile(self, sender, app_data):
         """Open a WAD file and load the map data."""
+
+        # TODO: Fix multiple combo boxes being created when opening multiple WAD files
+        # TODO: Sort the combo box items (especially after loading new wadfiles)
+
         self.wadfile = omg.WAD(app_data['file_path_name'])
         
         dpg.set_item_label("map_viewer_id", f"Map Viewer - Wadfile: { app_data['file_path_name'] }")
-        dpg.configure_item("show_map_btn", enabled=True)
+        #dpg.configure_item("show_map_btn", enabled=True)
         
         # get the key from wadfile.maps to identify the game format
         first_key = self.wadfile.maps.keys()[0]
@@ -109,16 +124,20 @@ class WadFile_IO:
         self.get_map_ids(self.wadfile.maps, mapID_format)
         print(f"Map IDs: {self.map_ids}")
 
+        maps_sorted = sorted(self.map_ids)
 
-    def plot_map(self, sender, app_data, level):
+        dpg.add_combo(label="Select Map", items=maps_sorted, default_value=wadfile.map_ids[0],
+                      parent="map_viewer_options", width=100, tag="map_selection_box", callback=map_selection_callback)
+
+
+    def plot_map(self, sender, app_data, level=None):
         """Plot the map data to the map viewer window."""
         if self.wadfile:
 
             dpg.delete_item("drawlist")
 
-            """if not self.level:
-                self.level = "MAP25"
-            """
+            if not self.level:
+                self.level = level
 
             scales = 0
             total  = 0
@@ -140,7 +159,7 @@ class WadFile_IO:
             dmspawns = False
             ctfspawns = False
             
-            wad_level = omg.MapEditor(self.wadfile.maps[self.level])
+            wad_level = omg.MapEditor(self.wadfile.maps[level])
 
             # determine scale = map area unit / pixel
             xmin = min([v.x for v in wad_level.vertexes])
@@ -269,7 +288,10 @@ class GameIdentify:
         
         wadfile.game = self.game
     
-    def switch_map(self, map_name):
+    
+    # Delete me!
+    """def switch_map(self, map_name):
+        
         map_format = self.identify_game(map_name)
         
         if map_format == "DOOM":
@@ -277,7 +299,8 @@ class GameIdentify:
         elif map_format == "DOOM2":
             return omg.WAD(map_name)
         else:
-            print(f"Unsupported map format: {map_name}")
+            print(f"Unsupported map format: {map_name}")"""
+    # ===================================================
 
 game = GameIdentify()
 
@@ -304,8 +327,9 @@ with dpg.window(label="Map Viewer", width=1280, height=720, id="map_viewer_id"):
     #dpg.show_documentation()
     with dpg.child_window(height=65, no_scrollbar=True, autosize_x=True):
         with dpg.collapsing_header(label="Map Viewer Options"):
-            with dpg.group(horizontal=True):
-                dpg.add_button(label="Show MAP01", callback=wadfile.plot_map, tag="show_map_btn")
+            with dpg.group(horizontal=True, tag="map_viewer_options"):
+                #dpg.add_button(label="Show MAP01", callback=wadfile.plot_map, tag="show_map_btn")
+                
                 dpg.add_button(label="Clear...", callback=cb_remove_drawlist)
                 #dpg.add_slider_float(label="delay", default_value=0.000, min_value=0.000, max_value=0.100, tag="delay_slider", width=200)
                 #dpg.add_slider_int(label="Map Scale", default_value=1000, min_value=250, max_value=2500, callback=cb_mapscale_slider, clamped=True)
