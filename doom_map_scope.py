@@ -102,7 +102,7 @@ class WadFile_IO:
 
         # TODO: Fix multiple combo boxes being created when opening multiple WAD files
         # TODO: Sort the combo box items (especially after loading new wadfiles)
-
+        print(f"Wadfile(s) selected: { app_data['file_path_name'] }")
         self.wadfile = WAD(app_data['file_path_name'])
         
         dpg.set_item_label("map_viewer_id", f"Map Viewer - Wadfile: { app_data['file_path_name'] }")
