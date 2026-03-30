@@ -5,7 +5,7 @@
 # utilized by doom_map_scope InZane84 1/13/2025
 
 import sys, getopt
-from omg import *
+from omg.wad import WAD
 from PIL import Image, ImageDraw, ImageFont
 
 verbose   = False

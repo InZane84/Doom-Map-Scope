@@ -15,10 +15,10 @@ LICENSE file in the root directory of this source tree.
 """
 
 import dearpygui.dearpygui as dpg
-import omg
+from omg.wad import WAD
+from omg.mapedit import MapEditor
 import time
 import re
-
 
 dpg.create_context()
 dpg.create_viewport(title="DOOM Map Scope", width=1280, height=720)
@@ -103,7 +103,7 @@ class WadFile_IO:
         # TODO: Fix multiple combo boxes being created when opening multiple WAD files
         # TODO: Sort the combo box items (especially after loading new wadfiles)
 
-        self.wadfile = omg.WAD(app_data['file_path_name'])
+        self.wadfile = WAD(app_data['file_path_name'])
         
         dpg.set_item_label("map_viewer_id", f"Map Viewer - Wadfile: { app_data['file_path_name'] }")
         #dpg.configure_item("show_map_btn", enabled=True)
@@ -126,8 +126,17 @@ class WadFile_IO:
 
         maps_sorted = sorted(self.map_ids)
 
-        dpg.add_combo(label="Select Map", items=maps_sorted, default_value=wadfile.map_ids[0],
-                      parent="map_viewer_options", width=100, tag="map_selection_box", callback=map_selection_callback)
+        if dpg.does_item_exist("map_selection_box"):
+            dpg.configure_item("map_selection_box",
+                               items=maps_sorted,
+                               default_value=wadfile.map_ids[0])
+        else:
+            dpg.add_combo(label="Select Map",
+                          items=maps_sorted,
+                          default_value=wadfile.map_ids[0],
+                          parent="map_viewer_options",
+                          width=100, tag="map_selection_box",
+                          callback=map_selection_callback)
 
 
     def plot_map(self, sender, app_data, level=None):
@@ -159,7 +168,7 @@ class WadFile_IO:
             dmspawns = False
             ctfspawns = False
             
-            wad_level = omg.MapEditor(self.wadfile.maps[level])
+            wad_level = MapEditor(self.wadfile.maps[level])
 
             # determine scale = map area unit / pixel
             xmin = min([v.x for v in wad_level.vertexes])
