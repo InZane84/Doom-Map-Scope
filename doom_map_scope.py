@@ -3,27 +3,22 @@
 """
 Module Name: doom_map_scope.py
 Description: Interactive map viewer for DOOM(1/2) levels.
-Author: Daniel Carroll (InZane84)
-Date: 1/13/2025
+Author: InZane84
+Date: 3/30/2026
 License: MIT
 """
 """
-Copyright (c) 2025 Daniel Carroll
+Copyright (c) 2026 InZane84
 
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
-
+import time, re, threading, asyncio, zipfile, io
 import dearpygui.dearpygui as dpg
 from omg.wad import WAD
 from omg.mapedit import MapEditor
-import time
-import re
+import httpx
 
-dpg.create_context()
-dpg.create_viewport(title="DOOM Map Scope", width=1280, height=720)
-dpg.show_documentation()
-dpg.show_imgui_demo()
 
 def cb_scale_slider(sender, app_data):
     dpg.set_global_font_scale(app_data)
@@ -77,6 +72,57 @@ def map_selection_callback(sender, app_data):
     print(f"Wadfile(s) selected: { app_data['file_path_name'] }")
     dpg.set_item_label("map_viewer_id", f"Map Viewer - Wadfile: { app_data['file_path_name'] }")
 """
+
+def process_idgames_input(sender, app_data):
+    """The dpg callback triggered by the entry box"""
+    user_input = dpg.get_value("user_input_field")
+    print(f"process_idgames_input: {user_input}")
+    
+    # 1. Show a loading indicator in your GUI (optional)
+    dpg.set_value("loading_status_text", "Downloading from idgames...")
+    
+    # 2. Launch the task in a separate background thread
+    # This returns immediately, so the GUI doesn't freeze
+    thread = threading.Thread(target=run_async_task, args=(user_input,))
+    thread.start()
+
+def run_async_task(user_input):
+    """A bridge function to run the async coroutine in the new thread."""
+    asyncio.run(async_idgames_task(user_input))
+
+async def async_idgames_task(user_input):
+    """The actual async logic using httpx."""
+    wad_id = user_input
+    print(f"wad_id: {wad_id}")
+    wad_id = user_input.split("://")[-1]
+    
+    try:
+        async with httpx.AsyncClient() as client:
+            # 1. Fetch metadata
+            api_url = f"https://doomworld.com{wad_id}&out=json"
+            print(api_url)
+            response = await client.get(api_url)
+            data = response.json()
+            
+            if 'content' in data:
+                file_path = data['content']['dir']
+                file_name = data['content']['filename']
+                download_url = f"https://gamers.org{file_path}{file_name}"
+                
+                # 2. Download ZIP
+                r = await client.get(download_url)
+                
+                # 3. Extract and load
+                with zipfile.ZipFile(io.BytesIO(r.content)) as z:
+                    wads = [f for f in z.namelist() if f.lower().endswith('.wad')]
+                    if wads:
+                        # IMPORTANT: Use dpg.configure_item or set_value to update 
+                        # the UI from a background thread safely.
+                        dpg.set_value("status_text", f"Loaded: {wads[0]}")
+                        # foo foo
+                        print(f"loaded wad")
+    except Exception as e:
+        dpg.set_value("status_text", f"Error: {str(e)}")
 
 class WadFile_IO:
     """Class for handling WAD file I/O operations."""
@@ -313,51 +359,82 @@ class GameIdentify:
 
 game = GameIdentify()
 
-with dpg.file_dialog(directory_selector=False, show=False, callback=wadfile.open_wadfile, id="file_dialog_id", width=800, height=400):
-    # TODO: Fix this shit!
-    dpg.add_file_extension(".wad", color=(255, 0, 0))
-    dpg.add_file_extension(".WAD", color=(0, 255, 0))
-    dpg.add_file_extension(".iwad")
-    dpg.add_file_extension(".pwad")
-    dpg.add_file_extension(".*")
-    #dpg.add_file_extension(".pk3")
-    #dpg.add_file_extension(".wad2")
-    #dpg.add_file_extension(".wad3")
-    #dpg.add_file_extension(".deh")
-    #dpg.add_file_extension(".bex")
+def main():
 
-with dpg.window(label="UI Scaling", width=200, height=100, id="scale_slider_window", show=False):
-    dpg.add_slider_float(label="Scale", default_value=1.0, min_value=0.5, max_value=10.0, callback=cb_scale_slider)
+    
 
-with dpg.viewport_menu_bar():
-    dpg.add_menu_item(label="UI Scaling...", callback= lambda: dpg.show_item("scale_slider_window"))
+    dpg.create_context()
+    dpg.create_viewport(title="DOOM Map Scope", width=1280, height=720)
+    dpg.show_documentation()
+    dpg.show_imgui_demo()
 
-with dpg.window(label="Map Viewer", width=1280, height=720, id="map_viewer_id"):
-    #dpg.show_documentation()
-    with dpg.child_window(height=65, no_scrollbar=True, autosize_x=True):
-        with dpg.collapsing_header(label="Map Viewer Options"):
-            with dpg.group(horizontal=True, tag="map_viewer_options"):
-                #dpg.add_button(label="Show MAP01", callback=wadfile.plot_map, tag="show_map_btn")
+    with dpg.file_dialog(directory_selector=False, show=False, callback=wadfile.open_wadfile, id="file_dialog_id", width=800, height=400):
+        # TODO: Fix this shit!
+        dpg.add_file_extension(".wad", color=(255, 0, 0))
+        dpg.add_file_extension(".WAD", color=(0, 255, 0))
+        dpg.add_file_extension(".iwad")
+        dpg.add_file_extension(".pwad")
+        dpg.add_file_extension(".*")
+        #dpg.add_file_extension(".pk3")
+        #dpg.add_file_extension(".wad2")
+        #dpg.add_file_extension(".wad3")
+        #dpg.add_file_extension(".deh")
+        #dpg.add_file_extension(".bex")
+
+    with dpg.window(label="UI Scaling", width=200, height=100, id="scale_slider_window", show=False):
+        dpg.add_slider_float(label="Scale", default_value=1.0, min_value=0.5, max_value=10.0, callback=cb_scale_slider)
+
+    with dpg.viewport_menu_bar():
+        dpg.add_menu_item(label="UI Scaling...", callback= lambda: dpg.show_item("scale_slider_window"))
+
+    with dpg.window(label="Map Viewer", width=1280, height=720, id="map_viewer_id"):
+        #dpg.show_documentation()
+        with dpg.child_window(height=65, no_scrollbar=True, autosize_x=True):
+            with dpg.collapsing_header(label="Map Viewer Options"):
+                with dpg.group(horizontal=True, tag="map_viewer_options"):
+                    #dpg.add_button(label="Show MAP01", callback=wadfile.plot_map, tag="show_map_btn")
+
+                    dpg.add_text("Loading wadfile...", tag="loading_status_text", color=(200, 200, 200))
+
+                    dpg.add_button(label="Clear...", callback=cb_remove_drawlist)
+                    #dpg.add_slider_float(label="delay", default_value=0.000, min_value=0.000, max_value=0.100, tag="delay_slider", width=200)
+                    #dpg.add_slider_int(label="Map Scale", default_value=1000, min_value=250, max_value=2500, callback=cb_mapscale_slider, clamped=True)
+                #with dpg.group(horizontal=True):
+                    dpg.add_text("Delay:")
+                    dpg.add_combo(width=100, items=["0.000", "0.001", "0.005", "0.010", "0.050", "0.100"], default_value="0.000", tag="delay_slider")
+                    dpg.add_text("Map Scale:")
+                    dpg.add_combo(width=100, items=["100", "75", "50", "25", "0"], default_value="Scale 50", callback=combo_callback)
+        with dpg.menu_bar():
+            with dpg.menu(label="File"):
+                dpg.add_menu_item(label="Open a WAD file...", callback= lambda: dpg.show_item("file_dialog_id"))
+                dpg.add_menu_item(label="Open a wadfile from the idgames database...", callback=lambda: dpg.show_item("idgames_wad_id"))
                 
-                dpg.add_button(label="Clear...", callback=cb_remove_drawlist)
-                #dpg.add_slider_float(label="delay", default_value=0.000, min_value=0.000, max_value=0.100, tag="delay_slider", width=200)
-                #dpg.add_slider_int(label="Map Scale", default_value=1000, min_value=250, max_value=2500, callback=cb_mapscale_slider, clamped=True)
-            #with dpg.group(horizontal=True):
-                dpg.add_text("Delay:")
-                dpg.add_combo(width=100, items=["0.000", "0.001", "0.005", "0.010", "0.050", "0.100"], default_value="0.000", tag="delay_slider")
-                dpg.add_text("Map Scale:")
-                dpg.add_combo(width=100, items=["100", "75", "50", "25", "0"], default_value="Scale 50", callback=combo_callback)
-    with dpg.menu_bar():
-        with dpg.menu(label="File"):
-            dpg.add_menu_item(label="Open a WAD file...", callback= lambda: dpg.show_item("file_dialog_id"))
-            
-            #dpg.show_documentation()
-            #dpg.add_menu_item(label="Save")
-            #dpg.add_menu_item(label="Exit")
 
-dpg.setup_dearpygui()
+                #dpg.show_documentation()
+                #dpg.add_menu_item(label="Save")
+                #dpg.add_menu_item(label="Exit")
+
+    with dpg.window(label="Enter the 'idgames://123' ID to open",
+                    modal=True,
+                    show= False,
+                    tag="idgames_wad_id",
+                    no_title_bar=False):
+        dpg.add_text("idgames id URL")
+        dpg.add_input_text(tag="user_input_field", hint="idgames address...")
+        with dpg.group(horizontal=True):
+            dpg.add_button(label="OK",
+                           width=75,
+                           callback=process_idgames_input)
+            # Add logic to hide the window after clicking OK
+            dpg.add_button(label="Cancel", width=75, callback=lambda: dpg.configure_item("idgames_wad_id", show=False))
 
 
-dpg.show_viewport()
-dpg.start_dearpygui()
-dpg.destroy_context()
+
+    dpg.setup_dearpygui()
+    dpg.show_viewport()
+    dpg.start_dearpygui()
+    dpg.destroy_context()
+
+
+if __name__ == "__main__":
+    main()
