@@ -1,0 +1,11 @@
+The newly added functions are to implement pulling a wadfile from a idgames://foo link
+
+Create a map (using slade's map editor or eureka) to be included with the program as a "stock" MAP
+And really, all that is needed is a 'rendering' of the map as it appears in the application....
+
+
+4/1/26 - BUG: when going from a wadfile from the net to locally stored, the loaded wadfile isn't 'loaded'
+         TODO: look into why wadget is broken
+
+3/31/26 - 'uv add wadget' - check out how wadget interacts with idGames db!
+                            remove after done with the lib!
