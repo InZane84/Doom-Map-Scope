@@ -13,9 +13,9 @@ Copyright (c) 2026 InZane84
 This source code is licensed under the MIT license found in the
 LICENSE file in the root directory of this source tree.
 """
-import time, re, threading, asyncio, zipfile, io, tempfile, os
+import time, re, threading, zipfile, io, tempfile, os
 import dearpygui.dearpygui as dpg
-from omg.wad import WAD, WadIO
+from omg.wad import WAD
 from omg.mapedit import MapEditor
 import httpx
 
@@ -74,38 +74,32 @@ def map_selection_callback(sender, app_data):
 """
 
 def download_wadfile(sender, app_data):
-    """The dpg callback triggered by the entry box"""
+    """spawn a thread which calls wadfile_downloader"""
 
+    #TOO:Is this function needed? Can be moved into wadfile_downloader?
+    
     # disable the OK btn on the download widget...
     #dpg.configure_item(sender, enabled=False)
-    
     user_input = dpg.get_value("user_input_field")
     print(f"process_idgames_input: {user_input}")
     
-    # 1. Show a loading indicator in your GUI (optional)
     #dpg.set_value("loading_status_text", "Downloading from idgames...")
     
-    # 2. Launch the task in a separate background thread
-    # This returns immediately, so the GUI doesn't freeze
     #downloader_thread = threading.Thread(target=run_async_task, args=(user_input,))
     #downloader_thread.start()
     threading.Thread(target=wadfile_downloader,
                      args=(user_input,),
                      daemon=True).start()
     print("below thread!")
-#def run_async_task(user_input):
-#    """A bridge function to run the async coroutine in the new thread."""
-#    asyncio.run(wadfile_downloader(user_input))
 
 def wadfile_downloader(user_input):
-    """The actual async logic using httpx."""
+    """get a wadfile over http from the idGames database"""
     wad_id = user_input
     print(f"wad_id: {wad_id}")
     wad_id = user_input.split("://")[-1].strip()
     
     try:
         with httpx.Client(follow_redirects=True) as client:
-            # 1. Fetch metadata
             api_url = f"https://doomworld.com/idgames/api/api.php?action=get&id={wad_id}&out=json"
             print(f"Requesting: {api_url}")
             response = client.get(api_url)
@@ -117,12 +111,11 @@ def wadfile_downloader(user_input):
                 download_url = f"https://gamers.org/pub/idgames/{file_path}/{file_name}"
                 #download_url = f"https://doomworld.org/idgames/{file_path}/{file_name}"
                 print(f"Downloading from: {download_url}")                
-                # 2. Download ZIP
                 _headers = {"User-Agent": "Mozilla/5.0 (Doom Map Scope)"}
                 r = client.get(download_url, headers=_headers)
                 r.raise_for_status() #check for 404
-                print(f"Getting wadfile...")
-                # 3. Extract and load
+                
+                print(f"wadfile_downloader: downloading wadfile...")
                 with zipfile.ZipFile(io.BytesIO(r.content)) as z:
                     wads = [f for f in z.namelist() if f.lower().endswith('.wad')]
                     print(f"wad is: {len(wads)}")
@@ -132,17 +125,14 @@ def wadfile_downloader(user_input):
                         # the UI from a background thread safely.
                         #dpg.set_value("status_text", f"Loaded: {wads[0]}")
                         wad_data = z.read(wads[0])
-                        #wadfile = WadFile_IO().open_wadfile(sender='foo', app_data=io.BytesIO(wad_data))
-                        #WadFile_IO().open_wadfile(sender='foo', app_data=io.BytesIO(wad_data))
                         
-                        #_wadfile = WadFile_IO()
-                        #_wadfile.open_wadfile(sender='a thread', app_data=io.BytesIO(wad_data))
-                        
-                        global wadfile
-                        wadfile = WadFile_IO()
-                        wadfile._isloaded = True
-                        wadfile.open_wadfile(sender='foo', app_data=io.BytesIO(wad_data))
-                        # foo foo
+                        # Try a fix reccomended by Claude...
+                        # my way
+                        #global wadfile
+                        #wadfile = WadFile_IO()
+                        # Claude's way...
+                        wadfile.open_wadfile(sender='foo',
+                                             app_data=io.BytesIO(wad_data))
                         print(f"Successfully loaded {wads[0]}")
     except httpx.ConnectError:
         dpg.set_value("status_text", "Error: Could not connect to idGames")
@@ -151,6 +141,7 @@ def wadfile_downloader(user_input):
     finally:
         pass
         #dpg.configure_item(args[sender], enabled=True)
+
 
 class WadFile_IO:
     """Class for handling WAD file I/O operations."""
@@ -171,37 +162,32 @@ class WadFile_IO:
         
         #self.map_data = None
 
-        self._isloaded = False
+        # is a wadfile loaded
+        self._isloaded = None
+
+    def _wadfile_to_tempfile(self, app_data):
+        """Write a loaded wadfile from idGames to /tmp"""
+        
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wad") as tmp:
+            tmp.write(app_data.getvalue())
+            tmp_path = tmp.name
+            self.wadfile = WAD(tmp_path)
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
+            self._isloaded = True
 
     def open_wadfile(self, sender, app_data):
-        """Open a WAD file and load the map data."""
+        """Open a wadfile and load the map data."""
 
-        # TODO: Fix multiple combo boxes being created when opening multiple WAD files
-        # TODO: Sort the combo box items (especially after loading new wadfiles)
-         
-        #if self.wadfile:
-        #    print(f"self.wadfile contains: {dir(self.wadfile)}")
-        #    self.wadfile = None
-
-        if self._isloaded:
-            print(f"closing loaded wadfile: {self.wadfile}")
-            #self.wadfile = None
-            if isinstance(app_data, io.BytesIO):
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".wad") as tmp:
-                    tmp.write(app_data.getvalue())
-                    tmp_path = tmp.name
-                    self.wadfile = WAD(tmp_path)
-                    if os.path.exists(tmp_path):
-                        os.remove(tmp_path)
-                    self._isloaded = True
-
+        # local wadfile
         if isinstance(app_data, dict) and 'file_path_name' in app_data:
             print(f"Wadfile(s) selected: { app_data['file_path_name'] }")
             self.wadfile = WAD(app_data['file_path_name'])
             self._isloaded = True
             dpg.set_item_label("map_viewer_id", f"Map Viewer - Wadfile: { app_data['file_path_name'] }")
+            print("Line 222: we have a hit")
 
-        # loaded from the net
+        # downloaded wadfile
         elif isinstance(app_data, io.BytesIO):
             print(f"open_wadfile: io.BytesIO")
 
@@ -209,13 +195,11 @@ class WadFile_IO:
                 tmp.write(app_data.getvalue())
                 tmp_path = tmp.name
                 self.wadfile = WAD(tmp_path)
-                self._isloaded = True
                 print(f"loaded wadfile: {tmp_path}")
                 print(f'wadfile is: {self.wadfile}')
                 if os.path.exists(tmp_path):
                     os.remove(tmp_path)
-
-            #self.wadfile = WAD(bytes(app_data))
+            self._isloaded = True
         
         #dpg.configure_item("show_map_btn", enabled=True)
         
@@ -253,12 +237,13 @@ class WadFile_IO:
                                items=maps_sorted,
                                default_value=wadfile.map_ids[0])
         else:
-            dpg.add_combo(label="Select Map",
-                          items=maps_sorted,
-                          default_value=wadfile.map_ids[0],
-                          parent="map_viewer_options",
-                          width=100, tag="map_selection_box",
-                          callback=map_selection_callback)
+            with dpg.group(horizontal=True, parent="map_viewer_options"):
+                dpg.add_text("Select Map:")
+                dpg.add_combo(items=maps_sorted,
+                              default_value=wadfile.map_ids[0],
+                              parent="map_viewer_options",
+                              width=100, tag="map_selection_box",
+                              callback=map_selection_callback)
 
 
     def plot_map(self, sender, app_data, level=None):
@@ -470,9 +455,10 @@ def main():
                 with dpg.group(horizontal=True, tag="map_viewer_options"):
                     #dpg.add_button(label="Show MAP01", callback=wadfile.plot_map, tag="show_map_btn")
 
-                    dpg.add_text("Loading wadfile...", tag="loading_status_text", color=(200, 200, 200))
+                    # trigger this when the ok button is clicked in the idgames downloader widget
+                    #dpg.add_text("Loading wadfile...", tag="loading_status_text", color=(200, 200, 200))
 
-                    dpg.add_button(label="Clear...", callback=cb_remove_drawlist)
+                    dpg.add_button(label="Clear Map", callback=cb_remove_drawlist)
                     #dpg.add_slider_float(label="delay", default_value=0.000, min_value=0.000, max_value=0.100, tag="delay_slider", width=200)
                     #dpg.add_slider_int(label="Map Scale", default_value=1000, min_value=250, max_value=2500, callback=cb_mapscale_slider, clamped=True)
                 #with dpg.group(horizontal=True):

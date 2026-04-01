@@ -4,8 +4,22 @@ Create a map (using slade's map editor or eureka) to be included with the progra
 And really, all that is needed is a 'rendering' of the map as it appears in the application....
 
 
-4/1/26 - BUG: when going from a wadfile from the net to locally stored, the loaded wadfile isn't 'loaded'
-         TODO: look into why wadget is broken
+4/1/26 - ✅BUG(FIXED!): when going from a wadfile from the net to locally stored, the loaded wadfile isn't 'loaded'
+         TODO: look into why wadget is broken - later
+               
+               fix 'loading wadfile...' in the map-viewer window
+               
+               the idGames wadfile loader widget should hide when Ok is clicked (if an idGames address is entered ONLY)
+               
+               ✅ put 'Select Map' on the left side of the map-selection box!!!!
+               
+               ✅ change the text of the 'clear map' widget to 'Clear Map' instead of 'Clear...'
+               
+               FEATURE: add < and > arrows for changing the map that's viewed
+                        and also a check-box for plotting 'all maps' in the loaded wadfile!
+                        
+                        add a 'status bar' to the map-viewer window that shows the loaded
+                        wadfile's number of vertices, linedefs, sectors, etc...
 
 3/31/26 - 'uv add wadget' - check out how wadget interacts with idGames db!
                             remove after done with the lib!
