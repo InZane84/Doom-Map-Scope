@@ -1,8 +1,11 @@
 # Doom MapScope
 
-    An interactive tool which displays level data from *id Tech-1* engine wadfiles(iwads/pwads)
+    An interactive tool which displays level data from *id Tech-1* engine WAD files(iwads/pwads)
     Currently in beta and targets DOOM/DOOM2
 
+| Viewing a WAD file from the idGames archive with its meta-data over http |
+| :---:
+| [<img src="images/idgames_wadfile_http_request.png" width="50%">](images/idgames_wadfile_http_request.png)
 
 | Whispers of Satan (DOOM2 MEGAWAD) MAP25 | Whispers of Satan (DOOM2 MEGAWAD) MAP28 |
 | :---: | :---: |

@@ -3,9 +3,19 @@ Fix up the dowwnloader widget
 Create a map (using slade's map editor or eureka) to be included with the program as a "stock" MAP
 And really, all that is needed is a 'rendering' of the map as it appears in the application....
 
+Design a Class that inherits omgifol WAD class and adds the ability to load from a io.BytesIO
 
-4/1/26 - ✅BUG(FIXED!): when going from a wadfile from the net to locally stored, the loaded wadfile isn't 'loaded'
+4/2/26 ================================================================================
+        - Implement a wadfile caching system when downloading over http(idGames)
+
+
+
+4/1/26 ===============================================================================
+        ✅BUG(FIXED!): when going from a wadfile from the net to locally stored,       the   loaded wadfile isn't 'loaded'
+
          TODO: look into why wadget is broken - later
+
+               show the wadfile filename/TITLE in the application title-bar!!!
                
                fix 'loading wadfile...' in the map-viewer window
                

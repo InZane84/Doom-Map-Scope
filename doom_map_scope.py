@@ -18,7 +18,71 @@ import dearpygui.dearpygui as dpg
 from omg.wad import WAD
 from omg.mapedit import MapEditor
 import httpx
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin
+from typing import TypedDict
 
+# need to ask about this class as it relates
+# to the annotated return type
+class IdGamesEntry(TypedDict):
+    """To satisfy pylance..."""
+    name: str
+    url: str
+    is_folder: bool
+    type: str
+
+
+def get_idgames_html(url: str) -> list[IdGamesEntry]:
+    """Get the dir listings from a url"""
+    try:
+        response = httpx.get(url, follow_redirects=True)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+        entries = []
+        links = soup.find_all('a')
+
+        for link in links:
+            href = link.get('href')
+            text = link.get_text().strip()
+            if not href or not text or text == "Parent Directory" or href == '../':
+                continue
+            full_url = urljoin(url, href)
+            is_folder = href.endswith('/')
+            entries.append({'name': text,
+                            'url': full_url,
+                            'is_folder': is_folder,
+                            'type': 'folder' if is_folder else 'file'})
+        return entries
+    except Exception as e:
+        print(f"Error parsing directory: {e}")
+        return []
+
+def get_wad_metadata():
+    """get the filename and title values from the
+       WAD Details window.   
+    """
+
+    filename = None
+    title = None
+    #TODO: Have to fix this shit...
+    try:
+        window_items = dpg.get_item_children("Wadfile Details")[1]
+        
+        for item_id in window_items:
+            if dpg.get_item_type(item_id) == "table":
+                table_rows = dpg_get_item_children(item_id)[1]
+                for row in table_rows:
+                    row_cells = dpg.get_item_children(row)[1]
+                    field = dpg.get_value(row_cells[0])
+                    value = dpg.get_value(row_cells[1])
+                    if field == 'filename':
+                        filename = value
+                    if field == 'title':
+                        title = value
+                    if filename and title:
+                        return filename, title
+    except:
+        return None
 
 def cb_scale_slider(sender, app_data):
     dpg.set_global_font_scale(app_data)
@@ -211,8 +275,7 @@ class WadFile_IO:
             print(f"Wadfile(s) selected: { app_data['file_path_name'] }")
             self.wadfile = WAD(app_data['file_path_name'])
             self._isloaded = True
-            dpg.set_item_label("map_viewer_id", f"Map Viewer - Wadfile: { app_data['file_path_name'] }")
-            print("Line 222: we have a hit")
+            dpg.set_item_label("map_viewer_id", f"Map Viewer - WAD file: { app_data['file_path_name'] }")
 
         # downloaded wadfile
         elif isinstance(app_data, io.BytesIO):
@@ -222,6 +285,9 @@ class WadFile_IO:
                 tmp.write(app_data.getvalue())
                 tmp_path = tmp.name
                 self.wadfile = WAD(tmp_path)
+
+                # SET THE TITLEBAR LABEL FOR THE MAP VIEWER HERE!
+                dpg.set_item_label("map_viewer_id", f"idGames WAD file: {get_wad_metadata()}")
                 print(f"loaded wadfile: {tmp_path}")
                 print(f'wadfile is: {self.wadfile}')
                 if os.path.exists(tmp_path):
