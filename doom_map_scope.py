@@ -56,6 +56,117 @@ def get_idgames_html(url: str) -> list[IdGamesEntry]:
     except Exception as e:
         print(f"Error parsing directory: {e}")
         return []
+    
+class IdGamesBrowser:
+    """Browser for idGames archive"""
+
+    def __init__(self, root_url=None):
+        self.root_url = root_url
+        self.current_url = root_url
+        self.current_entries = []
+        self.history_stack = []
+        self.window_tag = "idgames_browser_window"
+        self.table_tag = "idgames_table"
+        self.path_tag = "current_path"
+        
+        self.create_window()
+    
+    def create_window(self):
+        """Create the DearPyGui window"""
+        with dpg.window(label="idGames Browser", 
+                       width=900, 
+                       height=600, 
+                       pos=(50, 50),
+                       tag=self.window_tag):
+            
+            # Navigation bar
+            with dpg.group(horizontal=True):
+                dpg.add_button(label="◄ Back", 
+                             width=80, 
+                             callback=self.go_back)
+                #dpg.add_same_line()
+                dpg.add_button(label="⌂ Home", 
+                             width=80, 
+                             callback=self.go_home)
+                #dpg.add_same_line()
+                dpg.add_text("", tag=self.path_tag, wrap=700)
+            
+            # Directory table
+            with dpg.table(header_row=True, 
+                         row_background=True,
+                         borders_innerH=True,
+                         borders_outerH=True,
+                         borders_innerV=True,
+                         borders_outerV=True,
+                         tag=self.table_tag):
+                dpg.add_table_column(label="Name", width=500)
+                dpg.add_table_column(label="Type", width=100)
+        
+        # Load initial directory
+        self.navigate_to_url(self.current_url)
+    
+    def navigate_to_url(self, url):
+        """Navigate to a new URL and update the table"""
+        
+        # Add current URL to history before navigating
+        if self.current_url != url:
+            self.history_stack.append(self.current_url)
+        
+        self.current_url = url
+        self.current_entries = get_idgames_html(url)
+        
+        # Clear and rebuild table
+        if dpg.does_item_exist(self.table_tag):
+            dpg.delete_item(self.table_tag)
+        with dpg.table(header_row=True, 
+                 row_background=True,
+                 borders_innerH=True,
+                 borders_outerH=True,
+                 borders_innerV=True,
+                 borders_outerV=True,
+                 tag=self.table_tag,
+                 parent=self.window_tag):
+            dpg.add_table_column(label="Name", width=500)
+            dpg.add_table_column(label="Type", width=100)
+        
+        # Skip header row and rebuild
+        for entry in self.current_entries:
+            with dpg.table_row(parent=self.table_tag):
+                if entry['is_folder']:
+                    dpg.add_button(label=entry['name'], 
+                                 width=400,
+                                 callback=lambda s, a, u=entry['url']: self.navigate_to_url(u))
+                else:
+                    if entry['name'].lower().endswith('.wad'):
+                        dpg.add_button(label=entry['name'],
+                                     width=400,
+                                     callback=lambda s, a, f=entry['name']: self.download_wad_callback(f))
+                    else:
+                        dpg.add_text(entry['name'])
+                
+                dpg.add_text(entry['type'])
+        
+        # Update breadcrumb/title
+        dpg.set_value(self.path_tag, self.current_url)
+    
+    def go_back(self):
+        """Go back to previous directory"""
+        if self.history_stack:
+            url = self.history_stack.pop()
+            self.navigate_to_url(url)
+    
+    def go_home(self):
+        """Go back to root idGames directory"""
+        self.history_stack.clear()
+        self.navigate_to_url(self.root_url)
+    
+    '''def download_wad_callback(self, filename):
+        """Handle WAD download when clicked"""
+        download_url = urljoin(self.current_url, filename)
+        print(f"Download: {download_url}")
+        # Pass to your wadfile_downloader here
+        # wadfile_downloader(download_url)
+    '''
 
 def get_wad_metadata():
     """get the filename and title values from the
@@ -587,6 +698,9 @@ def main():
 
 
     dpg.setup_dearpygui()
+
+    idgames_browser = IdGamesBrowser("https://www.gamers.org/pub/idgames/")
+
     dpg.show_viewport()
     dpg.start_dearpygui()
     dpg.destroy_context()
