@@ -105,6 +105,33 @@ def wadfile_downloader(user_input):
             response = client.get(api_url)
             data = response.json()
             
+            #viewport_width = dpg.get_viewport_client_width()
+            #viewport_height = dpg.get_viewport_client_height()
+
+            # show wadfile info ============================================
+            with dpg.window(label="Wadfile Details",
+                            width=1000,
+                            height=1175,
+                            pos=(1350,
+                                 50)):
+                with dpg.table(header_row=True,
+                               row_background=True,
+                               borders_innerH=True,
+                               borders_outerH=True,
+                               borders_innerV=True,
+                               borders_outerV=True):
+                    dpg.add_table_column(label="Field", width_fixed=True, width=100)
+                    dpg.add_table_column(label="Value", width_fixed=False)
+                    for key, value in data["content"].items():
+                        with dpg.table_row():
+                            dpg.add_text(str(key), color=(255, 0, 0))
+                            dpg.add_text(str(value), color=(255, 100, 0), wrap=500)
+                            '''dpg.add_selectable(label=str(value),
+                                               span_columns=False,
+                                               width=800)
+                                               '''
+            # ==============================================================
+            # download wadfile
             if 'content' in data:
                 file_path = data['content']['dir'].strip('/')
                 file_name = data['content']['filename']
@@ -328,8 +355,8 @@ class WadFile_IO:
                     p1y = wad_level.vertexes[line.vx_a].y - ymin + border
                     p2x = wad_level.vertexes[line.vx_b].x - xmin + border
                     p2y = wad_level.vertexes[line.vx_b].y - ymin + border
-                    color = (175, 0, 0)
-                    if line.two_sided:   color = (100, 100, 150)
+                    color = (180, 40, 0)
+                    if line.two_sided:   color = (120, 85, 0)
                     #if line.special:    color = (220, 130, 50)
                     #if line.id > defid: color = (200, 110, 30)
 
@@ -342,7 +369,12 @@ class WadFile_IO:
                     draw.line((p1x, p1y-1, p2x, p2y-1), fill=color)
                     """
 
-                    dpg.draw_line((p1x, p1y), (p2x, p2y), color=color, thickness=1)
+                    if line.two_sided:
+                        thickness = 1
+                    else:
+                        thickness = 1.5
+
+                    dpg.draw_line((p1x, p1y), (p2x, p2y), color=color, thickness=thickness)
                     #dpg.render_dearpygui_frame()
                     #print("Drawing line: {}", {line.front})
 
@@ -425,9 +457,11 @@ def main():
     
 
     dpg.create_context()
-    dpg.create_viewport(title="DOOM Map Scope", width=1280, height=720)
-    dpg.show_documentation()
-    dpg.show_imgui_demo()
+
+    #TODO: dynamically size viewport according to host resolution
+    dpg.create_viewport(title="DOOM Map Scope", width=2400, height=1250)
+    #dpg.show_documentation()
+    #dpg.show_imgui_demo()
 
     with dpg.file_dialog(directory_selector=False, show=False, callback=wadfile.open_wadfile, id="file_dialog_id", width=800, height=400):
         # TODO: Fix this shit!
@@ -448,8 +482,7 @@ def main():
     with dpg.viewport_menu_bar():
         dpg.add_menu_item(label="UI Scaling...", callback= lambda: dpg.show_item("scale_slider_window"))
 
-    with dpg.window(label="Map Viewer", width=1280, height=720, id="map_viewer_id"):
-        #dpg.show_documentation()
+    with dpg.window(label="Map Viewer", width=1280, height=1175, pos=(25, 50), id="map_viewer_id"):
         with dpg.child_window(height=65, no_scrollbar=True, autosize_x=True):
             with dpg.collapsing_header(label="Map Viewer Options"):
                 with dpg.group(horizontal=True, tag="map_viewer_options"):
@@ -470,11 +503,6 @@ def main():
             with dpg.menu(label="File"):
                 dpg.add_menu_item(label="Open a WAD file...", callback= lambda: dpg.show_item("file_dialog_id"))
                 dpg.add_menu_item(label="Open a wadfile from the idgames database...", callback=lambda: dpg.show_item("idgames_wad_id"))
-                
-
-                #dpg.show_documentation()
-                #dpg.add_menu_item(label="Save")
-                #dpg.add_menu_item(label="Exit")
 
     with dpg.window(label="Enter the 'idgames://123' ID to open",
                     modal=True,

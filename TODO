@@ -1,4 +1,4 @@
-Fix up the dowwnloader widget and show details(json data) on the chosen/downloaded wadfile!
+Fix up the dowwnloader widget
 
 Create a map (using slade's map editor or eureka) to be included with the program as a "stock" MAP
 And really, all that is needed is a 'rendering' of the map as it appears in the application....
