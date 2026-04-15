@@ -5,6 +5,23 @@ And really, all that is needed is a 'rendering' of the map as it appears in the 
 
 Design a Class that inherits omgifol WAD class and adds the ability to load from a io.BytesIO
 
+Allow opening wad files from a zip locally
+
+if we dont have a connection to a idGames server then don't allow attempts to download from
+these servers in the File menu
+
+Don't rely/propagate HARDCODED URLS!!!!
+
+implement a system to allow the user to select from a list of idGames mirrors along
+with the statuses of each server
+
+4/15/26 ===============================================================================
+        - make SURE that when the site/mirror SSL certs expire, which we are using, it
+          doesn't break the application!
+
+4/5/26 ================================================================================
+        - load WAD file details when loading a local wad file
+
 4/2/26 ================================================================================
         - Implement a wadfile caching system when downloading over http(idGames)
 

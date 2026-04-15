@@ -34,10 +34,20 @@ class IdGamesEntry(TypedDict):
 
 def get_idgames_html(url: str) -> list[IdGamesEntry]:
     """Get the dir listings from a url"""
+
+    PRIMARY = "https://mirrors.lug.mtu.edu/idgames/"
+
+    # gonna just overwrite the url for now...
+    url = PRIMARY
+
+    _mirrors = []
+    MIRROR = None
+
     try:
         response = httpx.get(url, follow_redirects=True)
+        print("get_idgame_html: on Line 44")
         response.raise_for_status()
-        soup = BeautifulSoup(response.text, 'html.parser')
+        soup = BeautifulSoup(response.content, 'html.parser')
         entries = []
         links = soup.find_all('a')
 
@@ -48,11 +58,22 @@ def get_idgames_html(url: str) -> list[IdGamesEntry]:
                 continue
             full_url = urljoin(url, href)
             is_folder = href.endswith('/')
+            '''
+            for entry in entries:
+                print(entry)
+            '''
             entries.append({'name': text,
                             'url': full_url,
                             'is_folder': is_folder,
                             'type': 'folder' if is_folder else 'file'})
         return entries
+    
+    except httpx.ConnectError as e:
+        if "SSL" and "CERTIFICATE_VERIFY_FAILED" in e.args[0]:
+            print(e.args[0])
+            return []
+            
+
     except Exception as e:
         print(f"Error parsing directory: {e}")
         return []
@@ -60,8 +81,12 @@ def get_idgames_html(url: str) -> list[IdGamesEntry]:
 class IdGamesBrowser:
     """Browser for idGames archive"""
 
+    _PRIMARY = "https://mirrors.lug.mtu.edu/idgames/"
+
     def __init__(self, root_url=None):
-        self.root_url = root_url
+        # lets just overwrite the root_url for now
+        self.root_url = self._PRIMARY
+        # =======================================
         self.current_url = root_url
         self.current_entries = []
         self.history_stack = []
@@ -81,13 +106,19 @@ class IdGamesBrowser:
             
             # Navigation bar
             with dpg.group(horizontal=True):
-                dpg.add_button(label="◄ Back", 
+                dpg.add_button(label="Back", 
                              width=80, 
                              callback=self.go_back)
                 #dpg.add_same_line()
-                dpg.add_button(label="⌂ Home", 
+                dpg.add_button(label="Home", 
                              width=80, 
                              callback=self.go_home)
+                # for when the SSL cert is expired
+                dpg.add_text("!! SSL cert EXPIRED!!",
+                             tag="ssl_expired_cert",
+                             color=(255,0,0),
+                             show=False)
+
                 #dpg.add_same_line()
                 dpg.add_text("", tag=self.path_tag, wrap=700)
             
@@ -114,6 +145,17 @@ class IdGamesBrowser:
         
         self.current_url = url
         self.current_entries = get_idgames_html(url)
+
+        # ssl expired cert logic ==============================
+        if not self.current_entries:
+            dpg.show_item("ssl_expired_cert")
+            dpg.set_item_label(self.window_tag, f"idGames: {url} [Expired SSL CERT!!!]")
+        else:
+            dpg.hide_item("ssl_expired_cert")
+            dpg.set_item_label(self.window_tag, f"idGames Server: {url}")
+        # =====================================================
+
+        print(f"navigate_to_url: passing {url} --> to get_idgames_html")
         
         # Clear and rebuild table
         if dpg.does_item_exist(self.table_tag):
@@ -135,7 +177,7 @@ class IdGamesBrowser:
                 if entry['is_folder']:
                     dpg.add_button(label=entry['name'], 
                                  width=400,
-                                 callback=lambda s, a, u=entry['url']: self.navigate_to_url(u))
+                                 callback=lambda: self.navigate_to_url(entry["url"]))
                 else:
                     if entry['name'].lower().endswith('.wad'):
                         dpg.add_button(label=entry['name'],
@@ -214,8 +256,6 @@ def cb_remove_drawlist():
 
 def combo_callback(sender, app_data):
     """Callback for the map scale combo box."""
-
-    # TODO: after switching maps the combo box is stuck on the last map!
 
     print(f"Selected Option: {app_data}")
     match app_data:
@@ -310,7 +350,7 @@ def wadfile_downloader(user_input):
             if 'content' in data:
                 file_path = data['content']['dir'].strip('/')
                 file_name = data['content']['filename']
-                download_url = f"https://gamers.org/pub/idgames/{file_path}/{file_name}"
+                download_url = f"https://mirrors.lug.mtu.edu/idgames/{file_path}/{file_name}"
                 #download_url = f"https://doomworld.org/idgames/{file_path}/{file_name}"
                 print(f"Downloading from: {download_url}")                
                 _headers = {"User-Agent": "Mozilla/5.0 (Doom Map Scope)"}
@@ -699,7 +739,7 @@ def main():
 
     dpg.setup_dearpygui()
 
-    idgames_browser = IdGamesBrowser("https://www.gamers.org/pub/idgames/")
+    idgames_browser = IdGamesBrowser("https://mirrors.lug.mtu.edu/idgames/")
 
     dpg.show_viewport()
     dpg.start_dearpygui()

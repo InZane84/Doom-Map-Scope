@@ -1,6 +1,6 @@
 # Doom MapScope
 
-    An interactive tool which displays level data from *id Tech-1* engine WAD files(iwads/pwads)
+    An interactive tool which displays map/level data from *id Tech-1* engine WAD files(iwads/pwads)
     Currently in beta and targets DOOM/DOOM2
 
 | Viewing a WAD file from the idGames archive with its meta-data over http |
@@ -14,3 +14,5 @@
 | DOOM E1M1 | DOOM2 MAP01 |
 | :---: | :---: |
 | [<img src="images/doom_e1m1.png" width="50%">](images/doom_e1m1.png) | [<img src="images/doom2_map01.png" width="50%">](images/doom2_map01.png) |
+
+To run the application: uv run python doom_map_scope.py

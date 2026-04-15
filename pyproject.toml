@@ -1,12 +1,13 @@
 [project]
 name = "doom-map-scope"
 version = "0.1.0"
-description = "Add your description here"
+description = "iD Tech 1 WAD file tool for viewing map/level data"
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "beautifulsoup4>=4.14.3",
     "dearpygui>=2.2",
+    "html2text>=2025.4.15",
     "httpx>=0.28.1",
     "omgifol>=0.5.1",
     "pillow>=12.1.1",
